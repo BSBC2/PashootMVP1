@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, RefreshCw, Cable } from "lucide-react";
+import { CheckCircle2, XCircle, RefreshCw, Cable, AlertCircle } from "lucide-react";
+import { getEnabledIntegrations, isIntegrationConfigured } from "@/lib/integrations-config";
 
 export default async function ConnectionsPage() {
   const user = await getCurrentUser();
@@ -16,44 +17,8 @@ export default async function ConnectionsPage() {
     where: { userId: user.id },
   });
 
-  const availableSources = [
-    {
-      id: "wave",
-      name: "Wave Accounting",
-      description: "Sync transactions, invoices, and customers from Wave",
-      logo: "💎",
-    },
-    {
-      id: "stripe",
-      name: "Stripe",
-      description: "Import payments, refunds, and customer data",
-      logo: "💳",
-    },
-    {
-      id: "xero",
-      name: "Xero",
-      description: "Connect bank transactions, invoices, and bills",
-      logo: "📊",
-    },
-    {
-      id: "square",
-      name: "Square",
-      description: "Sync payments, orders, and customer data",
-      logo: "⬛",
-    },
-    {
-      id: "airtable",
-      name: "Airtable",
-      description: "Import records from your Airtable bases",
-      logo: "🔶",
-    },
-    {
-      id: "notion",
-      name: "Notion",
-      description: "Sync database records for expense tracking",
-      logo: "📝",
-    },
-  ];
+  // Get integrations dynamically from config
+  const availableSources = getEnabledIntegrations();
 
   const getConnection = (sourceId: string) => {
     return connections.find((c) => c.source === sourceId);
@@ -117,73 +82,102 @@ export default async function ConnectionsPage() {
         </Card>
       </div>
 
-      {/* Available Sources */}
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Available Sources</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {availableSources.map((source) => {
-            const connection = getConnection(source.id);
-            const isConnected = !!connection;
+      {/* Available Sources - Grouped by Category */}
+      <div className="space-y-8">
+        {["accounting", "payments", "payroll", "productivity"].map((category) => {
+          const categorySources = availableSources.filter(s => s.category === category);
+          if (categorySources.length === 0) return null;
 
-            return (
-              <Card key={source.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="text-4xl">{source.logo}</div>
-                      <div>
-                        <CardTitle>{source.name}</CardTitle>
-                        <CardDescription>{source.description}</CardDescription>
-                      </div>
-                    </div>
-                    {isConnected ? (
-                      <CheckCircle2 className="w-6 h-6 text-green-600" />
-                    ) : (
-                      <XCircle className="w-6 h-6 text-gray-300" />
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {isConnected && connection && (
-                      <div className="text-sm text-gray-600 space-y-1">
-                        <p>
-                          Connected on {new Date(connection.createdAt).toLocaleDateString()}
-                        </p>
-                        <p>
-                          Last synced: {connection.lastSyncAt
-                            ? new Date(connection.lastSyncAt).toLocaleString()
-                            : "Never"}
-                        </p>
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      {isConnected ? (
-                        <>
-                          <form action={`/api/sync/${source.id}`} method="POST">
-                            <Button type="submit" variant="outline" size="sm">
-                              <RefreshCw className="w-4 h-4 mr-2" />
-                              Sync Now
-                            </Button>
-                          </form>
-                          <Button variant="destructive" size="sm">
-                            Disconnect
-                          </Button>
-                        </>
-                      ) : (
-                        <Button asChild>
-                          <a href={`/api/connect/${source.id}`}>
-                            Connect {source.name}
-                          </a>
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+          const categoryNames: Record<string, string> = {
+            accounting: "Accounting Software",
+            payments: "Payment Processors",
+            payroll: "Payroll & HR",
+            productivity: "Productivity Tools",
+          };
+
+          return (
+            <div key={category}>
+              <h2 className="text-xl font-bold text-gray-900 mb-4">
+                {categoryNames[category]}
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {categorySources.map((source) => {
+                  const connection = getConnection(source.id);
+                  const isConnected = !!connection;
+                  const isConfigured = isIntegrationConfigured(source);
+
+                  return (
+                    <Card key={source.id} className={!isConfigured ? "opacity-60" : ""}>
+                      <CardHeader>
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="text-4xl">{source.logo}</div>
+                            <div>
+                              <CardTitle className="flex items-center gap-2">
+                                {source.name}
+                                {!isConfigured && (
+                                  <AlertCircle className="w-4 h-4 text-amber-500" />
+                                )}
+                              </CardTitle>
+                              <CardDescription>{source.description}</CardDescription>
+                            </div>
+                          </div>
+                          {isConnected ? (
+                            <CheckCircle2 className="w-6 h-6 text-green-600" />
+                          ) : (
+                            <XCircle className="w-6 h-6 text-gray-300" />
+                          )}
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {!isConfigured && (
+                            <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded">
+                              Configuration required in environment variables
+                            </div>
+                          )}
+                          {isConnected && connection && (
+                            <div className="text-sm text-gray-600 space-y-1">
+                              <p>
+                                Connected on {new Date(connection.createdAt).toLocaleDateString()}
+                              </p>
+                              <p>
+                                Last synced: {connection.lastSyncAt
+                                  ? new Date(connection.lastSyncAt).toLocaleString()
+                                  : "Never"}
+                              </p>
+                            </div>
+                          )}
+                          <div className="flex gap-2">
+                            {isConnected ? (
+                              <>
+                                <form action={`/api/sync/${source.id}`} method="POST">
+                                  <Button type="submit" variant="outline" size="sm">
+                                    <RefreshCw className="w-4 h-4 mr-2" />
+                                    Sync Now
+                                  </Button>
+                                </form>
+                                <Button variant="destructive" size="sm">
+                                  Disconnect
+                                </Button>
+                              </>
+                            ) : (
+                              <Button asChild disabled={!isConfigured}>
+                                <a href={`/api/connect/${source.id}`}>
+                                  Connect {source.name}
+                                </a>
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Help Section */}
