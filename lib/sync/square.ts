@@ -47,7 +47,8 @@ export async function syncSquareData(userId: string) {
   }
 
   const accessToken = decrypt(connection.accessToken);
-  const merchantId = connection.metadata?.merchantId;
+  const metadata = connection.metadata as any;
+  const merchantId = metadata?.merchantId;
 
   if (!merchantId) {
     throw new Error("Square merchant ID not found in connection metadata");

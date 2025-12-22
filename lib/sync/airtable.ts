@@ -28,8 +28,9 @@ export async function syncAirtableData(userId: string) {
   const accessToken = decrypt(connection.accessToken);
 
   // Get base and table from metadata (would be configured during OAuth)
-  const baseId = connection.metadata?.baseId;
-  const tableId = connection.metadata?.tableId || "Expenses"; // Default table name
+  const metadata = connection.metadata as any;
+  const baseId = metadata?.baseId;
+  const tableId = metadata?.tableId || "Expenses"; // Default table name
 
   if (!baseId) {
     throw new Error("Airtable base ID not found. Please reconnect.");

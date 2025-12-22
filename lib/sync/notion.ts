@@ -30,7 +30,8 @@ export async function syncNotionData(userId: string) {
   const accessToken = decrypt(connection.accessToken);
 
   // Get database ID from metadata (configured during OAuth)
-  const databaseId = connection.metadata?.databaseId;
+  const metadata = connection.metadata as any;
+  const databaseId = metadata?.databaseId;
 
   if (!databaseId) {
     throw new Error("Notion database ID not found. Please reconnect and select a database.");
