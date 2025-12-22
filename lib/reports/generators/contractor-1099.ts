@@ -66,7 +66,7 @@ export async function generateContractor1099Report(
     }))
     .sort((a, b) => b.totalPaid - a.totalPaid);
 
-  const contractorsBelow Threshold = Object.entries(contractorPayments)
+  const contractorsBelowThreshold = Object.entries(contractorPayments)
     .filter(([_, data]) => data.total < threshold)
     .map(([name, data]) => ({
       name,
