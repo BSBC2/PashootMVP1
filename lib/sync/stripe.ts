@@ -28,6 +28,11 @@ export async function syncStripeData(userId: string) {
   const charges = await stripe.charges.list({ limit: 100 });
 
   for (const charge of charges.data) {
+    // Extract customer ID - handle both string and object types
+    const customerId = typeof charge.customer === 'string'
+      ? charge.customer
+      : charge.customer?.id || null;
+
     await db.transaction.upsert({
       where: {
         userId_source_externalId: {
@@ -48,7 +53,7 @@ export async function syncStripeData(userId: string) {
         metadata: {
           currency: charge.currency,
           status: charge.status,
-          customerId: charge.customer,
+          customerId,
           paymentMethod: charge.payment_method_details?.type,
         },
       },
@@ -58,7 +63,7 @@ export async function syncStripeData(userId: string) {
         metadata: {
           currency: charge.currency,
           status: charge.status,
-          customerId: charge.customer,
+          customerId,
           paymentMethod: charge.payment_method_details?.type,
         },
       },
