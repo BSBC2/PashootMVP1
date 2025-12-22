@@ -58,12 +58,12 @@ export default function SignupPage() {
       }
 
       toast({
-        title: "Success",
-        description: "Account created! Redirecting to Stripe checkout...",
+        title: "Success!",
+        description: "Account created! Your 14-day free trial has started.",
       });
 
-      // Redirect to Stripe checkout
-      window.location.href = data.checkoutUrl;
+      // Redirect to login to sign in
+      router.push("/login?signup=success");
     } catch (error) {
       toast({
         title: "Error",
@@ -132,7 +132,7 @@ export default function SignupPage() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Continue to payment"}
+              {isLoading ? "Creating account..." : "Start free trial"}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Already have an account?{" "}
@@ -141,7 +141,7 @@ export default function SignupPage() {
               </Link>
             </p>
             <p className="text-xs text-center text-muted-foreground">
-              $12/month after 14-day free trial. Cancel anytime.
+              No credit card required. 14 days free, then $12/month.
             </p>
           </CardFooter>
         </form>

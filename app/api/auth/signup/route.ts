@@ -1,17 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { db } from "@/lib/db";
-import Stripe from "stripe";
-
-function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-02-24.acacia",
-  });
-}
 
 export async function POST(request: NextRequest) {
   try {
-    const stripe = getStripe();
     const { email, password, name } = await request.json();
 
     // Validate input
@@ -53,52 +45,28 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create Stripe customer
-    const customer = await stripe.customers.create({
-      email: user.email,
-      name: user.name || undefined,
-      metadata: {
-        userId: user.id,
-      },
-    });
+    // Calculate trial end date (14 days from now)
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + 14);
 
-    // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
-      customer: customer.id,
-      payment_method_types: ["card"],
-      line_items: [
-        {
-          price: process.env.STRIPE_PRICE_ID,
-          quantity: 1,
-        },
-      ],
-      mode: "subscription",
-      success_url: `${process.env.NEXTAUTH_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXTAUTH_URL}/signup?canceled=true`,
-      subscription_data: {
-        trial_period_days: 14,
-        metadata: {
-          userId: user.id,
-        },
-      },
-    });
-
-    // Create subscription record
+    // Create subscription record with trial status (no Stripe customer yet)
     await db.subscription.create({
       data: {
         userId: user.id,
-        stripeCustomerId: customer.id,
+        stripeCustomerId: `trial_${user.id}`, // Temporary placeholder
         status: "trialing",
+        currentPeriodEnd: trialEndDate,
       },
     });
 
     return NextResponse.json({
+      success: true,
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
       },
-      checkoutUrl: session.url,
+      message: "Account created successfully. Welcome to your 14-day free trial!",
     });
   } catch (error) {
     console.error("Signup error:", error);
