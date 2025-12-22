@@ -4,11 +4,11 @@ import { db } from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth();
-    const reportId = params.id;
+    const { id: reportId } = await params;
 
     const report = await db.report.findUnique({
       where: {
