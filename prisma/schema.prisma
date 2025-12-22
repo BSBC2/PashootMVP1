@@ -20,6 +20,7 @@ model User {
 
   subscription  Subscription?
   connections   Connection[]
+  transactions  Transaction[]
   reports       Report[]
   chatMessages  ChatMessage[]
 }
@@ -67,6 +68,8 @@ model Transaction {
   type        String   // income, expense, transfer
   metadata    Json?    // Store source-specific fields
   createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
   @@unique([userId, source, externalId])
