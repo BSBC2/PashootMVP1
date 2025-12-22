@@ -1,14 +1,18 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { db } from "@/lib/db";
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY!,
-});
+function getAnthropic() {
+  return new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY!,
+  });
+}
 
 export async function processFinancialQuery(
   userId: string,
   query: string
 ): Promise<string> {
+  const anthropic = getAnthropic();
+
   // Get recent transactions for context
   const transactions = await db.transaction.findMany({
     where: { userId },

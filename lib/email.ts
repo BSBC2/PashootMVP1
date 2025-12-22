@@ -1,6 +1,8 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 export async function sendReportEmail(
   to: string,
@@ -8,6 +10,7 @@ export async function sendReportEmail(
   reportHtml: string
 ) {
   try {
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: "Pashoot Reports <reports@pashootreports.com>",
       to: [to],
@@ -37,6 +40,7 @@ export async function sendReportEmail(
 
 export async function sendWelcomeEmail(to: string, name: string) {
   try {
+    const resend = getResend();
     const { data, error } = await resend.emails.send({
       from: "Pashoot Reports <hello@pashootreports.com>",
       to: [to],
