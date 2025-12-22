@@ -3,13 +3,16 @@ import Stripe from "stripe";
 import { requireAuth } from "@/lib/session";
 import { db } from "@/lib/db";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2025-02-24.acacia",
-});
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2025-02-24.acacia",
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
+    const stripe = getStripe();
 
     // Get user's subscription
     const subscription = await db.subscription.findUnique({
