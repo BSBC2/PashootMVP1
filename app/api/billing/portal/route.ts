@@ -1,18 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import Stripe from "stripe";
+import { getPaddle } from "@/lib/paddle";
 import { requireAuth } from "@/lib/session";
 import { db } from "@/lib/db";
-
-function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2025-02-24.acacia",
-  });
-}
 
 export async function POST(request: NextRequest) {
   try {
     const user = await requireAuth();
-    const stripe = getStripe();
+    const paddle = getPaddle();
 
     // Get user's subscription
     const subscription = await db.subscription.findUnique({
@@ -21,24 +15,30 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    if (!subscription) {
+    if (!subscription || !subscription.paddleSubscriptionId) {
       return NextResponse.json(
-        { error: "No subscription found" },
+        { error: "No active subscription found" },
         { status: 404 }
       );
     }
 
-    // Create Stripe billing portal session
-    const session = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripeCustomerId,
-      return_url: `${process.env.NEXTAUTH_URL}/dashboard/settings`,
-    });
+    // Get Paddle subscription to access management URL
+    const paddleSubscription = await paddle.subscriptions.get(subscription.paddleSubscriptionId);
 
-    return NextResponse.json({ url: session.url });
+    // Paddle doesn't have a billing portal API like Stripe
+    // Instead, customers manage subscriptions via the update payment method URL
+    // or by canceling through your app which calls Paddle API
+
+    // For now, return the management URLs
+    return NextResponse.json({
+      managementUrls: paddleSubscription.managementUrls,
+      updatePaymentMethod: paddleSubscription.managementUrls?.updatePaymentMethod,
+      cancel: paddleSubscription.managementUrls?.cancel,
+    });
   } catch (error) {
     console.error("Billing portal error:", error);
     return NextResponse.json(
-      { error: "Failed to create billing portal session" },
+      { error: "Failed to get subscription management URLs" },
       { status: 500 }
     );
   }

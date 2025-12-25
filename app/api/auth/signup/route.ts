@@ -49,11 +49,11 @@ export async function POST(request: NextRequest) {
     const trialEndDate = new Date();
     trialEndDate.setDate(trialEndDate.getDate() + 14);
 
-    // Create subscription record with trial status (no Stripe customer yet)
+    // Create subscription record with trial status (no Paddle customer yet)
     await db.subscription.create({
       data: {
         userId: user.id,
-        stripeCustomerId: `trial_${user.id}`, // Temporary placeholder
+        paddleCustomerId: null, // Will be set when user subscribes
         status: "trialing",
         currentPeriodEnd: trialEndDate,
       },
